@@ -1,3 +1,5 @@
+import { addEventListeners } from './events.js';
+
 /**
  * Creates a DOM element from a virtual element (VNode).
  * @param {object} vnode - The virtual element.
@@ -10,11 +12,10 @@ function createElement(vnode) {
   const el = document.createElement(vnode.tag);
   vnode.$el = el;
 
+  addEventListeners(el, vnode.attrs);
+
   for (const key in vnode.attrs) {
-    if (key.startsWith('on')) {
-      const event = key.substring(2).toLowerCase();
-      el.addEventListener(event, vnode.attrs[key]);
-    } else {
+    if (!key.startsWith('on')) {
       el.setAttribute(key, vnode.attrs[key]);
     }
   }
