@@ -1,50 +1,40 @@
-import { createElement, render } from '../framework/index.js';
+import { createElement, render, setRenderer, createState } from '../framework/index.js';
 
-const view1 = createElement({
-  tag: 'div',
-  attrs: {},
-  children: [
-    {
-      tag: 'h1',
-      attrs: { class: 'title' },
-      children: ['Hello, World!'],
-    },
-    {
-      tag: 'p',
-      children: ['This is the first view.'],
-    },
-  ],
+const { getState, setState } = createState({
+  count: 0,
 });
 
-const view2 = createElement({
+function App() {
+  const state = getState();
+  return {
     tag: 'div',
     attrs: {},
     children: [
       {
         tag: 'h1',
         attrs: { class: 'title' },
-        children: ['Hello, World! (Updated)'],
-      },
-      {
-        tag: 'p',
-        children: ['This is the second view.'],
+        children: [`Counter: ${state.count}`],
       },
       {
         tag: 'button',
         attrs: {
-            onclick: () => console.log('Button clicked!'),
+          onclick: () => setState({ count: getState().count + 1 }),
         },
-        children: ['Click me'],
+        children: ['Increment'],
+      },
+      {
+        tag: 'button',
+        attrs: {
+            onclick: () => setState({ count: getState().count - 1 }),
+        },
+        children: ['Decrement'],
       }
     ],
-  });
+  };
+}
 
 const container = document.getElementById('root');
 
-// First render
-render(view1, container);
+setRenderer(render, container, App);
 
-// After 2 seconds, render the second view
-setTimeout(() => {
-  render(view2, container);
-}, 2000);
+render(App(), container);

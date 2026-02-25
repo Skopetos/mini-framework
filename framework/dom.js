@@ -8,6 +8,7 @@
  */
 function createElement(vnode) {
   const el = document.createElement(vnode.tag);
+  vnode.$el = el;
 
   for (const key in vnode.attrs) {
     if (key.startsWith('on')) {
@@ -44,7 +45,7 @@ function render(vnode, container) {
     container.appendChild(createElement(vnode));
   } else {
     // Subsequent renders
-    updateElement(container, vnode, currentVNode);
+    updateElement(container.firstChild, vnode, currentVNode);
   }
   currentVNode = vnode;
 }
@@ -55,8 +56,45 @@ function render(vnode, container) {
  * @param {object} newVNode - The new virtual node.
  * @param {object} oldVNode - The old virtual node.
  */
-function updateElement(parent, newVNode, oldVNode) {
-  parent.replaceChild(createElement(newVNode), parent.firstChild);
+function updateElement(parent, newVNode, oldVNode, index = 0) {
+  const el = parent.childNodes[index];
+
+  if (!newVNode) {
+    el.remove();
+  } else if (typeof newVNode === 'string' || typeof oldVNode === 'string') {
+    if (newVNode !== oldVNode) {
+      el.textContent = newVNode;
+    }
+  } else if (newVNode.tag !== oldVNode.tag) {
+    const newEl = createElement(newVNode);
+    el.replaceWith(newEl);
+  } else {
+    // Diff attributes
+    const oldAttrs = oldVNode.attrs || {};
+    const newAttrs = newVNode.attrs || {};
+
+    for (const attr in newAttrs) {
+      if (newAttrs[attr] !== oldAttrs[attr]) {
+        el.setAttribute(attr, newAttrs[attr]);
+      }
+    }
+
+    for (const attr in oldAttrs) {
+      if (!(attr in newAttrs)) {
+        el.removeAttribute(attr);
+      }
+    }
+
+    // Diff children
+    const oldChildren = oldVNode.children || [];
+    const newChildren = newVNode.children || [];
+    const len = Math.max(oldChildren.length, newChildren.length);
+
+    for (let i = 0; i < len; i++) {
+      updateElement(el, newChildren[i], oldChildren[i], i);
+    }
+  }
 }
 
 export { createElement, render, updateElement };
+
