@@ -24,4 +24,14 @@ function createElement(vnode) {
   return el;
 }
 
-export { createElement };
+
+/**
+ * Renders a virtual node into a container element.
+ * @param {object} vnode - The virtual node to render.
+ * @param {HTMLElement} container - The container element to render into.
+ */
+function render(vnode, container) {
+  container.appendChild(createElement(vnode));
+}
+
+export { createElement, render };
