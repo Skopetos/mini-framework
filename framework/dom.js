@@ -1,4 +1,4 @@
-import { addEventListeners } from './events.js';
+import { addEventListeners, updateEventListeners } from './events.js';
 
 /**
  * Creates a DOM element from a virtual element (VNode).
@@ -70,18 +70,20 @@ function updateElement(parent, newVNode, oldVNode, index = 0) {
     const newEl = createElement(newVNode);
     el.replaceWith(newEl);
   } else {
+    updateEventListeners(el, newVNode.attrs, oldVNode.attrs);
+
     // Diff attributes
     const oldAttrs = oldVNode.attrs || {};
     const newAttrs = newVNode.attrs || {};
 
     for (const attr in newAttrs) {
-      if (newAttrs[attr] !== oldAttrs[attr]) {
+      if (newAttrs[attr] !== oldAttrs[attr] && !attr.startsWith('on')) {
         el.setAttribute(attr, newAttrs[attr]);
       }
     }
 
     for (const attr in oldAttrs) {
-      if (!(attr in newAttrs)) {
+      if (!(attr in newAttrs) && !attr.startsWith('on')) {
         el.removeAttribute(attr);
       }
     }
