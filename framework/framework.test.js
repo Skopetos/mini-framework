@@ -35,19 +35,3 @@ function runTests() {
 
     console.log("Framework tests completed.");
 }
-
-// This is a placeholder for the framework's exports.
-// In a real test environment, this would be handled by a module loader.
-window.miniFramework = {
-    createState: (initialState) => {
-        let state = initialState;
-        return {
-            getState: () => state,
-            setState: (newState) => {
-                state = { ...state, ...newState };
-            },
-        };
-    },
-};
-
-runTests();
