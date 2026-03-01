@@ -1,4 +1,4 @@
-import { createElement, render, setRenderer, createState, createRouter, navigate, getCurrentView } from '/framework/index.js';
+import { createElement, render, setRenderer, createState, createRouter, navigate, getCurrentView } from '../framework/index.js';
 
 const { getState, setState } = createState({
     todos: [],
@@ -16,6 +16,7 @@ function Header() {
                 tag: 'input',
                 attrs: {
                     class: 'new-todo',
+                    name: 'newTodo',
                     placeholder: 'What needs to be done?',
                     autofocus: true,
                     onkeydown: (e) => {
@@ -126,13 +127,25 @@ function TodoList() {
         return true;
     });
 
+    const allCompleted = todos.length > 0 && todos.every(todo => todo.completed);
+
     return {
         tag: 'section',
         attrs: { class: 'main' },
         children: [
             {
                 tag: 'input',
-                attrs: { id: 'toggle-all', class: 'toggle-all', type: 'checkbox' },
+                attrs: { 
+                    id: 'toggle-all', 
+                    class: 'toggle-all', 
+                    type: 'checkbox',
+                    checked: allCompleted,
+                    onchange: () => {
+                        const newCompleted = !allCompleted;
+                        const newTodos = todos.map(todo => ({ ...todo, completed: newCompleted }));
+                        setState({ todos: newTodos });
+                    },
+                },
                 children: [],
             },
             { tag: 'label', attrs: { for: 'toggle-all' }, children: ['Mark all as complete'] },
@@ -149,6 +162,7 @@ function Footer() {
     const { todos, filter } = getState();
     const itemsLeft = todos.filter(todo => !todo.completed).length;
     const completedCount = todos.length - itemsLeft;
+    const itemWord = itemsLeft === 1 ? 'item' : 'items';
 
     const clearCompletedButton = completedCount > 0 ? {
         tag: 'button',
@@ -169,7 +183,7 @@ function Footer() {
             {
                 tag: 'span',
                 attrs: { class: 'todo-count' },
-                children: [`${itemsLeft} items left`],
+                children: [`${itemsLeft} ${itemWord} left`],
             },
             {
                 tag: 'ul',
@@ -237,17 +251,20 @@ const routes = {
 
 const container = document.getElementById('root');
 setRenderer(render, container, App);
-createRouter(routes);
 
 function handleRouteChange() {
-    const hash = window.location.hash;
+    const hash = window.location.hash || '#/';
     if (hash === '#/active') {
-        setState({ filter: 'active' }, false);
+        setState({ filter: 'active' });
     } else if (hash === '#/completed') {
-        setState({ filter: 'completed' }, false);
+        setState({ filter: 'completed' });
     } else {
-        setState({ filter: 'all' }, false);
+        setState({ filter: 'all' });
     }
 }
 
 window.addEventListener('hashchange', handleRouteChange);
+
+// Initialize route and render on load
+handleRouteChange();
+render(App(), container);

@@ -1,4 +1,4 @@
-import { renderApp } from '/framework/state.js';
+import { renderApp } from './state.js';
 
 let _routes = {};
 let _currentView = null;

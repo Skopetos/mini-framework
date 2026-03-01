@@ -61,6 +61,11 @@ function createElement(vnode) {
     if (key.startsWith('on')) {
       const eventType = key.substring(2).toLowerCase();
       el.__events[eventType] = attrs[key];
+    } else if (key === 'checked' || key === 'disabled' || key === 'selected') {
+      // Handle boolean attributes
+      if (attrs[key]) {
+        el[key] = true;
+      }
     } else {
       el.setAttribute(key, attrs[key]);
     }
@@ -145,6 +150,9 @@ function updateElement(el, newVNode, oldVNode) {
       if (attr.startsWith('on')) {
           const eventType = attr.substring(2).toLowerCase();
           el.__events[eventType] = newAttrs[attr];
+      } else if (attr === 'checked' || attr === 'disabled' || attr === 'selected') {
+          // Handle boolean attributes as properties
+          el[attr] = !!newAttrs[attr];
       } else if (newAttrs[attr] !== oldAttrs[attr]) {
           el.setAttribute(attr, newAttrs[attr]);
       }
@@ -155,6 +163,11 @@ function updateElement(el, newVNode, oldVNode) {
           if (!(attr in newAttrs)) {
               const eventType = attr.substring(2).toLowerCase();
               delete el.__events[eventType];
+          }
+      } else if (attr === 'checked' || attr === 'disabled' || attr === 'selected') {
+          // Reset boolean attributes if not in new attrs
+          if (!(attr in newAttrs)) {
+              el[attr] = false;
           }
       } else if (!(attr in newAttrs)) {
           el.removeAttribute(attr);
