@@ -1,5 +1,18 @@
 let eventsApplied = false;
 
+function isEmptyVNode(vnode) {
+  return vnode === null || vnode === undefined || vnode === false;
+}
+
+function isTextVNode(vnode) {
+  return typeof vnode === 'string' || typeof vnode === 'number';
+}
+
+function getVNodeChildren(vnode) {
+  const children = Array.isArray(vnode.children) ? vnode.children : [];
+  return children.filter(child => !isEmptyVNode(child));
+}
+
 function applyEvents(container) {
     if (eventsApplied) return;
 
@@ -29,25 +42,33 @@ function applyEvents(container) {
  * @returns {HTMLElement} The created DOM element.
  */
 function createElement(vnode) {
+  if (isEmptyVNode(vnode)) {
+    return document.createTextNode('');
+  }
+
+  if (isTextVNode(vnode)) {
+    return document.createTextNode(String(vnode));
+  }
+
   const el = document.createElement(vnode.tag);
   vnode.$el = el;
   el.__events = {};
 
-  for (const key in vnode.attrs) {
+  const attrs = vnode.attrs || {};
+  const children = getVNodeChildren(vnode);
+
+  for (const key in attrs) {
     if (key.startsWith('on')) {
       const eventType = key.substring(2).toLowerCase();
-      el.__events[eventType] = vnode.attrs[key];
+      el.__events[eventType] = attrs[key];
     } else {
-      el.setAttribute(key, vnode.attrs[key]);
+      el.setAttribute(key, attrs[key]);
     }
   }
 
-  for (const child of vnode.children) {
-    if (typeof child === 'string') {
-      el.appendChild(document.createTextNode(child));
-    } else {
-      el.appendChild(createElement(child));
-    }
+  for (const child of children) {
+    if (isEmptyVNode(child)) continue;
+    el.appendChild(createElement(child));
   }
 
   return el;
@@ -81,18 +102,32 @@ function render(vnode, container) {
  * @param {object} oldVNode - The old virtual node.
  */
 function updateElement(el, newVNode, oldVNode) {
-  if (!newVNode) {
+  if (!el) return;
+
+  if (isEmptyVNode(newVNode)) {
     el.remove();
     return;
   }
-  
-  if (typeof newVNode === 'string' || typeof oldVNode === 'string') {
-    if (newVNode !== oldVNode) {
-      el.textContent = newVNode;
+
+  if (isEmptyVNode(oldVNode)) {
+    el.replaceWith(createElement(newVNode));
+    return;
+  }
+
+  if (isTextVNode(newVNode) || isTextVNode(oldVNode)) {
+    const newText = isTextVNode(newVNode) ? String(newVNode) : '';
+    const oldText = isTextVNode(oldVNode) ? String(oldVNode) : '';
+
+    if (newText !== oldText) {
+      if (!isTextVNode(newVNode) || !isTextVNode(oldVNode)) {
+        el.replaceWith(createElement(newVNode));
+      } else {
+        el.textContent = newText;
+      }
     }
     return;
   }
-  
+
   if (newVNode.tag !== oldVNode.tag) {
     const newEl = createElement(newVNode);
     el.replaceWith(newEl);
@@ -127,8 +162,8 @@ function updateElement(el, newVNode, oldVNode) {
   }
 
   // Diff children
-  const oldChildren = oldVNode.children || [];
-  const newChildren = newVNode.children || [];
+  const oldChildren = getVNodeChildren(oldVNode);
+  const newChildren = getVNodeChildren(newVNode);
   const parentEl = el;
 
   const oldLen = oldChildren.length;
@@ -156,4 +191,3 @@ function updateElement(el, newVNode, oldVNode) {
 }
 
 export { createElement, render, updateElement };
-
