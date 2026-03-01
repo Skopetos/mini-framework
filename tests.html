@@ -9,22 +9,25 @@
     <div id="results"></div>
 
     <script>
-        // Mocking the DOM manipulation functions for testing without a real DOM
-        const miniFramework = {
-            createElement: (vnode) => {
-                // This is a simplified mock. A real test would need more.
-                return { vnode };
-            },
-            createState: (initialState) => {
-                let state = initialState;
-                return {
-                    getState: () => state,
-                    setState: (newState) => {
-                        state = { ...state, ...newState };
-                    },
-                };
-            },
-            // Add other framework functions as needed for testing
+        const miniFramework = {};
+
+        (function() {
+            let state = {};
+
+            miniFramework.createState = (initialState) => {
+                state = initialState;
+            };
+
+            miniFramework.getState = () => state;
+
+            miniFramework.setState = (newState) => {
+                state = { ...state, ...newState };
+            };
+        })();
+
+        miniFramework.createElement = (vnode) => {
+            // This is a simplified mock. A real test would need more.
+            return { vnode };
         };
 
         window.miniFramework = miniFramework;
