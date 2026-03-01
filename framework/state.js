@@ -1,4 +1,4 @@
-import { render } from './dom.js';
+import { render } from '/framework/dom.js';
 
 let _state = null;
 let _renderer = null;

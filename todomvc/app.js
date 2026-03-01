@@ -1,4 +1,4 @@
-import { createElement, render, setRenderer, createState, createRouter, navigate, getCurrentView } from '../framework/index.js';
+import { createElement, render, setRenderer, createState, createRouter, navigate, getCurrentView } from '/framework/index.js';
 
 const { getState, setState } = createState({
     todos: [],
@@ -26,6 +26,7 @@ function Header() {
                         }
                     },
                 },
+                children: [],
             },
         ],
     };
@@ -111,6 +112,7 @@ function TodoItem({ todo }) {
                     onblur: save,
                     autofocus: true,
                 },
+                children: [],
             },
         ].filter(Boolean),
     };
@@ -131,6 +133,7 @@ function TodoList() {
             {
                 tag: 'input',
                 attrs: { id: 'toggle-all', class: 'toggle-all', type: 'checkbox' },
+                children: [],
             },
             { tag: 'label', attrs: { for: 'toggle-all' }, children: ['Mark all as complete'] },
             {
@@ -232,9 +235,9 @@ const routes = {
     '#/completed': App,
 };
 
-createRouter(routes);
-
 const container = document.getElementById('root');
+setRenderer(render, container, App);
+createRouter(routes);
 
 function handleRouteChange() {
     const hash = window.location.hash;
@@ -248,8 +251,3 @@ function handleRouteChange() {
 }
 
 window.addEventListener('hashchange', handleRouteChange);
-
-
-setRenderer(render, container, App);
-
-render(App(), container);

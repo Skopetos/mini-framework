@@ -129,10 +129,29 @@ function updateElement(el, newVNode, oldVNode) {
   // Diff children
   const oldChildren = oldVNode.children || [];
   const newChildren = newVNode.children || [];
-  const len = Math.max(oldChildren.length, newChildren.length);
+  const parentEl = el;
 
-  for (let i = 0; i < len; i++) {
-    updateElement(el.childNodes[i], newChildren[i], oldChildren[i]);
+  const oldLen = oldChildren.length;
+  const newLen = newChildren.length;
+  const minLen = Math.min(oldLen, newLen);
+
+  // Update existing children
+  for (let i = 0; i < minLen; i++) {
+    updateElement(parentEl.childNodes[i], newChildren[i], oldChildren[i]);
+  }
+
+  // Add new children
+  if (newLen > oldLen) {
+    for (let i = oldLen; i < newLen; i++) {
+      parentEl.appendChild(createElement(newChildren[i]));
+    }
+  }
+
+  // Remove old children
+  if (oldLen > newLen) {
+    for (let i = oldLen - 1; i >= newLen; i--) {
+      parentEl.childNodes[i].remove();
+    }
   }
 }
 

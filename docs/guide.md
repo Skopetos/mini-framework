@@ -201,3 +201,6 @@ mini-framework is based on the concept of a virtual DOM. When you render a view,
 The state management system is based on a single state object. When you call `setState`, the framework merges the new state with the old state and then triggers a re-render.
 
 The routing system is based on the URL hash. When the hash changes, the router finds the corresponding view and triggers a re-render.
+
+
+use python3 -m http.server 8080
