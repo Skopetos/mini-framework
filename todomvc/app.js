@@ -175,11 +175,11 @@ const container = document.getElementById('root');
 function handleRouteChange() {
     const hash = window.location.hash;
     if (hash === '#/active') {
-        setState({ filter: 'active' });
+        setState({ filter: 'active' }, false);
     } else if (hash === '#/completed') {
-        setState({ filter: 'completed' });
+        setState({ filter: 'completed' }, false);
     } else {
-        setState({ filter: 'all' });
+        setState({ filter: 'all' }, false);
     }
 }
 

@@ -35,10 +35,13 @@ function getState() {
 /**
  * Updates the state and re-renders the application.
  * @param {object} newState - The new state.
+ * @param {boolean} rerender - Whether to re-render the application.
  */
-function setState(newState) {
+function setState(newState, rerender = true) {
   _state = { ..._state, ...newState };
-  _renderer(_app(), _container);
+  if (rerender) {
+    _renderer(_app(), _container);
+  }
 }
 
 function renderApp() {
