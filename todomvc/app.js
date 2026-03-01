@@ -3,6 +3,7 @@ import { createElement, render, setRenderer, createState, createRouter, navigate
 const { getState, setState } = createState({
     todos: [],
     filter: 'all', // 'all', 'active', 'completed'
+    editing: null,
 });
 
 function Header() {
@@ -31,13 +32,37 @@ function Header() {
 }
 
 function TodoItem({ todo }) {
+    const { editing } = getState();
+    const isEditing = editing === todo.id;
+
+    const save = (e) => {
+        const newTitle = e.target.value.trim();
+        if (newTitle) {
+            const todos = getState().todos.map(t =>
+                t.id === todo.id ? { ...t, title: newTitle } : t
+            );
+            setState({ todos, editing: null });
+        } else {
+            const todos = getState().todos.filter(t => t.id !== todo.id);
+            setState({ todos, editing: null });
+        }
+    };
+
+    const cancel = () => {
+        setState({ editing: null });
+    };
+
     return {
         tag: 'li',
-        attrs: { class: todo.completed ? 'completed' : '' },
+        attrs: {
+            class: `${todo.completed ? 'completed' : ''} ${isEditing ? 'editing' : ''}`,
+        },
         children: [
             {
                 tag: 'div',
-                attrs: { class: 'view' },
+                attrs: {
+                    class: 'view',
+                },
                 children: [
                     {
                         tag: 'input',
@@ -53,7 +78,15 @@ function TodoItem({ todo }) {
                             },
                         },
                     },
-                    { tag: 'label', children: [todo.title] },
+                    {
+                        tag: 'label',
+                        attrs: {
+                            ondblclick: () => {
+                                setState({ editing: todo.id });
+                            },
+                        },
+                        children: [todo.title],
+                    },
                     {
                         tag: 'button',
                         attrs: {
@@ -66,7 +99,20 @@ function TodoItem({ todo }) {
                     },
                 ],
             },
-        ],
+            isEditing && {
+                tag: 'input',
+                attrs: {
+                    class: 'edit',
+                    value: todo.title,
+                    onkeydown: (e) => {
+                        if (e.key === 'Enter') save(e);
+                        if (e.key === 'Escape') cancel();
+                    },
+                    onblur: save,
+                    autofocus: true,
+                },
+            },
+        ].filter(Boolean),
     };
 }
 
@@ -99,6 +145,19 @@ function TodoList() {
 function Footer() {
     const { todos, filter } = getState();
     const itemsLeft = todos.filter(todo => !todo.completed).length;
+    const completedCount = todos.length - itemsLeft;
+
+    const clearCompletedButton = completedCount > 0 ? {
+        tag: 'button',
+        attrs: {
+            class: 'clear-completed',
+            onclick: () => {
+                const newTodos = getState().todos.filter(todo => !todo.completed);
+                setState({ todos: newTodos });
+            },
+        },
+        children: ['Clear completed'],
+    } : null;
 
     return {
         tag: 'footer',
@@ -145,20 +204,25 @@ function Footer() {
                     },
                 ],
             },
-        ],
+            clearCompletedButton,
+        ].filter(Boolean),
     };
 }
 
 
 function App() {
+    const { todos } = getState();
+    const todoList = todos.length > 0 ? TodoList() : null;
+    const footer = todos.length > 0 ? Footer() : null;
+
     return {
         tag: 'div',
         attrs: { class: 'todoapp' },
         children: [
             Header(),
-            TodoList(),
-            Footer(),
-        ],
+            todoList,
+            footer,
+        ].filter(Boolean),
     };
 }
 

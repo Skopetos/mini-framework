@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Framework Tests</title>
+</head>
+<body>
+    <h1>Framework Tests</h1>
+    <div id="results"></div>
+
+    <script>
+        // Mocking the DOM manipulation functions for testing without a real DOM
+        const miniFramework = {
+            createElement: (vnode) => {
+                // This is a simplified mock. A real test would need more.
+                return { vnode };
+            },
+            createState: (initialState) => {
+                let state = initialState;
+                return {
+                    getState: () => state,
+                    setState: (newState) => {
+                        state = { ...state, ...newState };
+                    },
+                };
+            },
+            // Add other framework functions as needed for testing
+        };
+
+        window.miniFramework = miniFramework;
+    </script>
+    <script src="framework/framework.test.js"></script>
+    <script>
+        const resultsDiv = document.getElementById('results');
+        try {
+            runTests();
+            resultsDiv.innerHTML = '<p style="color: green;">All tests passed!</p>';
+        } catch (e) {
+            resultsDiv.innerHTML = `<p style="color: red;">Test failed: ${e.message}</p>`;
+        }
+    </script>
+</body>
+</html>

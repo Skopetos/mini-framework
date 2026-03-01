@@ -1,4 +1,24 @@
-import { addEventListeners, updateEventListeners } from './events.js';
+let eventsApplied = false;
+
+function applyEvents(container) {
+    if (eventsApplied) return;
+
+    const eventTypes = ['click', 'keydown', 'change', 'input', 'submit']; // Add more events as needed
+
+    for (const eventType of eventTypes) {
+        container.addEventListener(eventType, e => {
+            let el = e.target;
+            while (el && el !== container) {
+                if (el.__events && el.__events[eventType]) {
+                    el.__events[eventType](e);
+                }
+                if (el === container) break;
+                el = el.parentElement;
+            }
+        });
+    }
+    eventsApplied = true;
+}
 
 /**
  * Creates a DOM element from a virtual element (VNode).
@@ -11,11 +31,13 @@ import { addEventListeners, updateEventListeners } from './events.js';
 function createElement(vnode) {
   const el = document.createElement(vnode.tag);
   vnode.$el = el;
-
-  addEventListeners(el, vnode.attrs);
+  el.__events = {};
 
   for (const key in vnode.attrs) {
-    if (!key.startsWith('on')) {
+    if (key.startsWith('on')) {
+      const eventType = key.substring(2).toLowerCase();
+      el.__events[eventType] = vnode.attrs[key];
+    } else {
       el.setAttribute(key, vnode.attrs[key]);
     }
   }
@@ -31,8 +53,6 @@ function createElement(vnode) {
   return el;
 }
 
-
-
 let currentVNode = null;
 
 /**
@@ -41,8 +61,11 @@ let currentVNode = null;
  * @param {HTMLElement} container - The container element to render into.
  */
 function render(vnode, container) {
+  applyEvents(container);
+
   if (currentVNode === null) {
     // First render
+    container.innerHTML = '';
     container.appendChild(createElement(vnode));
   } else {
     // Subsequent renders
@@ -53,49 +76,63 @@ function render(vnode, container) {
 
 /**
  * Updates the DOM based on the differences between the new and old virtual DOM.
- * @param {HTMLElement} parent - The parent element in the DOM.
+ * @param {HTMLElement} el - The DOM element to update.
  * @param {object} newVNode - The new virtual node.
  * @param {object} oldVNode - The old virtual node.
  */
-function updateElement(parent, newVNode, oldVNode, index = 0) {
-  const el = parent.childNodes[index];
-
+function updateElement(el, newVNode, oldVNode) {
   if (!newVNode) {
     el.remove();
-  } else if (typeof newVNode === 'string' || typeof oldVNode === 'string') {
+    return;
+  }
+  
+  if (typeof newVNode === 'string' || typeof oldVNode === 'string') {
     if (newVNode !== oldVNode) {
       el.textContent = newVNode;
     }
-  } else if (newVNode.tag !== oldVNode.tag) {
+    return;
+  }
+  
+  if (newVNode.tag !== oldVNode.tag) {
     const newEl = createElement(newVNode);
     el.replaceWith(newEl);
-  } else {
-    updateEventListeners(el, newVNode.attrs, oldVNode.attrs);
+    return;
+  }
+  
+  newVNode.$el = el;
+  el.__events = el.__events || {};
 
-    // Diff attributes
-    const oldAttrs = oldVNode.attrs || {};
-    const newAttrs = newVNode.attrs || {};
+  // Diff attributes
+  const oldAttrs = oldVNode.attrs || {};
+  const newAttrs = newVNode.attrs || {};
 
-    for (const attr in newAttrs) {
-      if (newAttrs[attr] !== oldAttrs[attr] && !attr.startsWith('on')) {
-        el.setAttribute(attr, newAttrs[attr]);
+  for (const attr in newAttrs) {
+      if (attr.startsWith('on')) {
+          const eventType = attr.substring(2).toLowerCase();
+          el.__events[eventType] = newAttrs[attr];
+      } else if (newAttrs[attr] !== oldAttrs[attr]) {
+          el.setAttribute(attr, newAttrs[attr]);
       }
-    }
+  }
 
-    for (const attr in oldAttrs) {
-      if (!(attr in newAttrs) && !attr.startsWith('on')) {
-        el.removeAttribute(attr);
+  for (const attr in oldAttrs) {
+      if (attr.startsWith('on')) {
+          if (!(attr in newAttrs)) {
+              const eventType = attr.substring(2).toLowerCase();
+              delete el.__events[eventType];
+          }
+      } else if (!(attr in newAttrs)) {
+          el.removeAttribute(attr);
       }
-    }
+  }
 
-    // Diff children
-    const oldChildren = oldVNode.children || [];
-    const newChildren = newVNode.children || [];
-    const len = Math.max(oldChildren.length, newChildren.length);
+  // Diff children
+  const oldChildren = oldVNode.children || [];
+  const newChildren = newVNode.children || [];
+  const len = Math.max(oldChildren.length, newChildren.length);
 
-    for (let i = 0; i < len; i++) {
-      updateElement(el, newChildren[i], oldChildren[i], i);
-    }
+  for (let i = 0; i < len; i++) {
+    updateElement(el.childNodes[i], newChildren[i], oldChildren[i]);
   }
 }
 
