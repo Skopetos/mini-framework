@@ -1,0 +1,404 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#root {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Lobby Styles */
+.lobby-container {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  min-width: 400px;
+}
+
+.lobby-container h1 {
+  color: #333;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+}
+
+.nickname-input {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2em;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s;
+}
+
+.nickname-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.join-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.join-button:hover {
+  transform: translateY(-2px);
+}
+
+.join-button:active {
+  transform: translateY(0);
+}
+
+.player-counter {
+  margin-top: 30px;
+  font-size: 1.5em;
+  color: #555;
+}
+
+.player-list {
+  list-style: none;
+  margin-top: 20px;
+}
+
+.player-list li {
+  padding: 10px;
+  margin: 5px 0;
+  background: #f5f5f5;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.countdown {
+  margin-top: 20px;
+  font-size: 1.8em;
+  color: #ff6b6b;
+  font-weight: bold;
+  animation: pulse 1s infinite;
+}
+
+.waiting-message {
+  margin-top: 20px;
+  font-size: 1.2em;
+  color: #888;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Game Container */
+.game-container {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1400px;
+}
+
+.game-board-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* HUD */
+.hud {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+}
+
+.hud-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+}
+
+.hud-name {
+  font-weight: bold;
+}
+
+.hud-lives {
+  color: #ff6b6b;
+}
+
+/* Game Board */
+.game-board {
+  position: relative;
+  width: 680px; /* 17 * 40 */
+  height: 680px;
+  background: #228B22;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.game-grid {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(17, 40px);
+  grid-template-rows: repeat(17, 40px);
+}
+
+.grid-cell {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cell-empty {
+  background: #2d5016;
+}
+
+.cell-wall {
+  background: #4a4a4a;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.cell-block {
+  background: #8B4513;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Game Entities Layer */
+.game-entities {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Player */
+.player {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: transform 0.1s linear;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.player.dead {
+  opacity: 0.3;
+}
+
+/* Bomb */
+.bomb {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bomb-pulse 0.5s infinite alternate;
+  z-index: 5;
+}
+
+.bomb::after {
+  content: '💣';
+  font-size: 1.5em;
+}
+
+/* Hide emoji when using sprite */
+.bomb.sprite-mode::after {
+  content: '';
+}
+
+@keyframes bomb-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.1); }
+}
+
+/* Explosion */
+.explosion {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle, #ff6b00, #ff0000);
+  animation: explosion-fade 1s;
+  z-index: 8;
+}
+
+@keyframes explosion-fade {
+  0% { opacity: 1; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.8; transform: scale(1); }
+}
+
+/* Powerup */
+.powerup {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8em;
+  animation: powerup-float 2s infinite;
+  z-index: 3;
+}
+
+@keyframes powerup-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Chat */
+.chat-container {
+  width: 300px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  height: 720px;
+}
+
+.chat-header {
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px 10px 0 0;
+  font-weight: bold;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-message {
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+
+.chat-message-nickname {
+  font-weight: bold;
+  margin-right: 5px;
+  color: #667eea;
+}
+
+.chat-input-container {
+  padding: 15px;
+  border-top: 1px solid #ddd;
+}
+
+.chat-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 0.9em;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+/* Game Over */
+.game-over {
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.game-over h1 {
+  font-size: 3em;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.winner-name {
+  font-size: 2em;
+  color: #667eea;
+  margin-bottom: 30px;
+}
+
+.play-again-button {
+  padding: 15px 40px;
+  font-size: 1.2em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.play-again-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Error message */
+.error-message {
+  background: #ff6b6b;
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+}
