@@ -21,6 +21,13 @@ body {
   align-items: center;
 }
 
+
+.lobby-screen {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
 /* Lobby Styles */
 .lobby-container {
   background: white;

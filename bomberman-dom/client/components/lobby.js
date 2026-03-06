@@ -1,7 +1,8 @@
+import { createChat } from './chat.js';
 import { SOCKET_EVENTS, PLAYER_COLORS } from '../../shared/constants.js';
 
 export function Lobby(state, socket) {
-  const { nickname, playerId, lobbyInfo, error } = state;
+  const { nickname, playerId, lobbyInfo, error, chatMessages } = state;
 
   // If player hasn't joined yet, show nickname input
   if (!playerId) {
@@ -60,36 +61,44 @@ export function Lobby(state, socket) {
 
   return {
     tag: 'div',
-    attrs: { class: 'lobby-container' },
+    attrs: { class: 'lobby-screen' },
     children: [
-      { tag: 'h1', children: ['💣 BOMBERMAN'] },
       {
         tag: 'div',
-        attrs: { class: 'player-counter' },
-        children: [`Players: ${playerCount}/4`],
+        attrs: { class: 'lobby-container' },
+        children: [
+          { tag: 'h1', children: ['💣 BOMBERMAN'] },
+          {
+            tag: 'div',
+            attrs: { class: 'player-counter' },
+            children: [`Players: ${playerCount}/4`],
+          },
+          {
+            tag: 'ul',
+            attrs: { class: 'player-list' },
+            children: players.map(p => ({
+              tag: 'li',
+              children: [
+                {
+                  tag: 'div',
+                  attrs: {
+                    class: 'player-indicator',
+                    style: `background-color: ${PLAYER_COLORS[p.index]}`,
+                  },
+                },
+                { tag: 'span', children: [p.nickname] },
+              ],
+            })),
+          },
+          {
+            tag: 'div',
+            attrs: { class: isCountdown ? 'countdown' : 'waiting-message' },
+            children: [countdownMessage],
+          },
+        ],
       },
-      {
-        tag: 'ul',
-        attrs: { class: 'player-list' },
-        children: players.map(p => ({
-          tag: 'li',
-          children: [
-            {
-              tag: 'div',
-              attrs: {
-                class: 'player-indicator',
-                style: `background-color: ${PLAYER_COLORS[p.index]}`,
-              },
-            },
-            { tag: 'span', children: [p.nickname] },
-          ],
-        })),
-      },
-      {
-        tag: 'div',
-        attrs: { class: isCountdown ? 'countdown' : 'waiting-message' },
-        children: [countdownMessage],
-      },
-    ],
+      createChat(chatMessages, socket),
+    ]
   };
 }
+

@@ -1,6 +1,7 @@
 import { SOCKET_EVENTS, DIRECTIONS, PLAYER_COLORS, GAME_CONFIG, CELL_TYPES, POWERUP_TYPES } from '../../shared/constants.js';
 import { GameLoop } from '../systems/game-loop.js';
 import { createGrid } from '../systems/grid.js';
+import { createChat } from './chat.js';
 
 // Store game loop OUTSIDE - persist across re-renders
 let gameLoop = null;
@@ -77,71 +78,4 @@ function createHUD(players) {
   };
 }
 
-function createGameBoard(gameState) {
-  return {
-    tag: 'div',
-    attrs: { class: 'game-board', id: 'game-board' },
-    children: [
-      // Grid (static, rendered once)
-      createGrid(gameState.map),
-      // Entities container (updated by game loop)
-      {
-        tag: 'div',
-        attrs: { class: 'game-entities', id: 'game-entities' },
-        children: [],
-      },
-    ],
-  };
-}
 
-function createChat(messages, socket) {
-  return {
-    tag: 'div',
-    attrs: { class: 'chat-container' },
-    children: [
-      {
-        tag: 'div',
-        attrs: { class: 'chat-header' },
-        children: ['💬 Chat'],
-      },
-      {
-        tag: 'div',
-        attrs: { class: 'chat-messages', id: 'chat-messages' },
-        children: messages.map(msg => ({
-          tag: 'div',
-          attrs: { class: 'chat-message' },
-          children: [
-            {
-              tag: 'span',
-              attrs: { class: 'chat-message-nickname' },
-              children: [`${msg.nickname}:`],
-            },
-            { tag: 'span', children: [msg.text] },
-          ],
-        })),
-      },
-      {
-        tag: 'div',
-        attrs: { class: 'chat-input-container' },
-        children: [
-          {
-            tag: 'input',
-            attrs: {
-              type: 'text',
-              class: 'chat-input',
-              placeholder: 'Type a message...',
-              onkeydown: (e) => {
-                if (e.key === 'Enter' && e.target.value.trim()) {
-                  socket.emit(SOCKET_EVENTS.CHAT_MESSAGE, {
-                    text: e.target.value.trim(),
-                  });
-                  e.target.value = '';
-                }
-              },
-            },
-          },
-        ],
-      },
-    ],
-  };
-}
