@@ -64,13 +64,8 @@ socket.on(SOCKET_EVENTS.GAME_START, (data) => {
 socket.on(SOCKET_EVENTS.GAME_STATE, (gameState) => {
   const state = getState();
   if (state.screen === 'game') {
-    // Update state silently without triggering re-render
-    setState({ gameState }, false);
-    
-    // Directly update game loop
-    if (window.currentGameLoop) {
-      window.currentGameLoop.updateGameState(gameState);
-    }
+    // Update state and trigger re-render
+    setState({ gameState });
   }
 });
 

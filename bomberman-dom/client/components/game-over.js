@@ -16,14 +16,11 @@ export function GameOver(state) {
         children: ['Draw!'],
       },
       {
-        tag: 'button',
+        tag: 'div',
         attrs: {
-          class: 'play-again-button',
-          onclick: () => {
-            window.location.reload();
-          },
+          class: 'play-again-button disabled',
         },
-        children: ['Play Again'],
+        children: ['Returning to lobby...'],
       },
     ],
   };

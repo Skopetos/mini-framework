@@ -284,7 +284,7 @@ export class GameRoom {
       id: `exp-${this.tick}`,
       cells: explosionCells,
       createdAt: Date.now(),
-      hasDamagedPlayers: false, // Track if this explosion has dealt damage
+      damagedPlayers: new Set(),
     };
 
     this.explosions.push(explosion);
@@ -306,15 +306,10 @@ export class GameRoom {
    */
   checkExplosionCollisions() {
     this.explosions.forEach(explosion => {
-      // Skip if this explosion has already damaged players
-      if (explosion.hasDamagedPlayers) return;
-      
-      // Mark as dealt damage
-      explosion.hasDamagedPlayers = true;
-      
       explosion.cells.forEach(cell => {
         this.players.forEach(player => {
-          if (player.alive && player.x === cell.x && player.y === cell.y) {
+          if (player.alive && player.x === cell.x && player.y === cell.y && !explosion.damagedPlayers.has(player.id)) {
+            explosion.damagedPlayers.add(player.id);
             player.lives--;
             console.log(`💔 ${player.nickname} hit by explosion! Lives remaining: ${player.lives}`);
             if (player.lives <= 0) {
@@ -396,10 +391,10 @@ export class GameRoom {
       this.tickInterval = null;
     }
 
-    // Reset game after 5 seconds
+    // Reset game after 3 seconds
     setTimeout(() => {
       this.resetGame();
-    }, 5000);
+    }, 3000);
 
     return winner;
   }
