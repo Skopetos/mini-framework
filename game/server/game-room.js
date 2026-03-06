@@ -14,8 +14,11 @@ export class GameRoom {
     this.explosions = [];
     this.powerups = [];
     this.lobbyTimer = null;
+    this.lobbyStartTime = null;
     this.countdownTimer = null;
+    this.countdownValue = null;
     this.tickInterval = null;
+    this.powerupSpawnInterval = null;
     this.tick = 0;
   }
 
@@ -46,6 +49,8 @@ export class GameRoom {
       alive: true,
       powerups: [],
       index: playerIndex,
+      lastMoveTime: 0,
+      bombPassExpiry: 0,
     };
 
     this.players.set(socketId, player);
@@ -65,6 +70,14 @@ export class GameRoom {
     // If game is in progress, check win condition
     if (this.state === 'playing') {
       this.checkWinCondition();
+    } else if (this.state === 'countdown' && this.players.size < GAME_CONFIG.MAX_PLAYERS) {
+      // A player left during countdown – cancel it and return to lobby
+      console.log('[removePlayer] player left during countdown, reverting to lobby');
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+      this.countdownValue = null;
+      this.state = 'lobby';
+      this.checkLobbyStatus();
     }
   }
 
@@ -104,11 +117,19 @@ export class GameRoom {
     if (this.state !== 'lobby') return;
 
     this.state = 'countdown';
-    this.countdownStartTime = Date.now();
-    
-    this.countdownTimer = setTimeout(() => {
-      this.startGame();
-    }, GAME_CONFIG.COUNTDOWN_TIME);
+    this.countdownValue = Math.ceil(GAME_CONFIG.COUNTDOWN_TIME / 1000);
+    console.log(`[startCountdown] state=countdown, countdownValue=${this.countdownValue}, countdownTimer before=${this.countdownTimer}`);
+
+    this.countdownTimer = setInterval(() => {
+      this.countdownValue--;
+      console.log(`[countdown] tick: countdownValue=${this.countdownValue}, state=${this.state}`);
+      if (this.countdownValue <= 0) {
+        clearInterval(this.countdownTimer);
+        this.countdownTimer = null;
+        console.log('[countdown] reached 0, calling startGame()');
+        this.startGame();
+      }
+    }, 1000);
   }
 
   /**
@@ -123,6 +144,11 @@ export class GameRoom {
     this.tickInterval = setInterval(() => {
       this.gameTick();
     }, tickRate);
+
+    // Periodically spawn a random powerup on an empty cell
+    this.powerupSpawnInterval = setInterval(() => {
+      this.spawnRandomPowerup();
+    }, GAME_CONFIG.POWERUP_SPAWN_INTERVAL);
   }
 
   /**
@@ -151,6 +177,15 @@ export class GameRoom {
     const player = this.players.get(socketId);
     if (!player || !player.alive || this.state !== 'playing') return;
 
+    // Enforce movement cooldown – speed powerup reduces the delay
+    const now = Date.now();
+    const cooldown = Math.max(
+      GAME_CONFIG.MOVE_COOLDOWN_MIN,
+      GAME_CONFIG.MOVE_COOLDOWN_BASE - (player.speed - 1) * GAME_CONFIG.MOVE_COOLDOWN_STEP
+    );
+    if (now - player.lastMoveTime < cooldown) return;
+    player.lastMoveTime = now;
+
     let newX = player.x;
     let newY = player.y;
 
@@ -170,7 +205,7 @@ export class GameRoom {
     }
 
     // Check if new position is valid
-    if (this.canMoveTo(newX, newY)) {
+    if (this.canMoveTo(newX, newY, player)) {
       player.x = newX;
       player.y = newY;
 
@@ -182,16 +217,19 @@ export class GameRoom {
   /**
    * Check if a position is valid for movement
    */
-  canMoveTo(x, y) {
+  canMoveTo(x, y, player = null) {
     // Check map boundaries and walls/blocks
     if (!isWalkable(this.map, x, y)) {
       return false;
     }
 
-    // Check if there's a bomb at this position
-    const bombAtPos = this.bombs.find(b => b.x === x && b.y === y);
-    if (bombAtPos) {
-      return false;
+    // Check if there's a bomb at this position (skip if player has bomb pass active)
+    const hasBombPass = player && Date.now() < player.bombPassExpiry;
+    if (!hasBombPass) {
+      const bombAtPos = this.bombs.find(b => b.x === x && b.y === y);
+      if (bombAtPos) {
+        return false;
+      }
     }
 
     return true;
@@ -315,6 +353,7 @@ export class GameRoom {
             if (player.lives <= 0) {
               player.alive = false;
               console.log(`☠️  ${player.nickname} died!`);
+              this.dropPowerupOnDeath(player);
             }
           }
         });
@@ -341,6 +380,74 @@ export class GameRoom {
   }
 
   /**
+   * Spawn a powerup on a random empty cell (periodic timer)
+   */
+  spawnRandomPowerup() {
+    if (this.state !== 'playing' || !this.map) return;
+
+    const size = GAME_CONFIG.MAP_SIZE;
+    const occupiedCells = new Set();
+
+    // Mark cells occupied by players, bombs, or existing powerups
+    this.players.forEach(p => occupiedCells.add(`${p.x},${p.y}`));
+    this.bombs.forEach(b => occupiedCells.add(`${b.x},${b.y}`));
+    this.powerups.forEach(p => occupiedCells.add(`${p.x},${p.y}`));
+
+    // Collect all eligible empty cells
+    const candidates = [];
+    for (let y = 1; y < size - 1; y++) {
+      for (let x = 1; x < size - 1; x++) {
+        if (this.map[y][x] === CELL_TYPES.EMPTY && !occupiedCells.has(`${x},${y}`)) {
+          candidates.push({ x, y });
+        }
+      }
+    }
+
+    if (candidates.length === 0) return;
+
+    const pos = candidates[Math.floor(Math.random() * candidates.length)];
+    const types = Object.values(POWERUP_TYPES);
+    const type = types[Math.floor(Math.random() * types.length)];
+
+    this.powerups.push({
+      id: `powerup-${this.tick}-rng`,
+      type,
+      x: pos.x,
+      y: pos.y,
+    });
+    console.log(`⭐ Periodic powerup [${type}] spawned at (${pos.x}, ${pos.y})`);
+  }
+
+  /**
+   * Drop a powerup when a player dies.
+   * Drops one of their collected powerups, or a random one if they had none.
+   */
+  dropPowerupOnDeath(player) {
+    const types = Object.values(POWERUP_TYPES);
+
+    let type;
+    if (player.powerups.length > 0) {
+      // Drop the last collected powerup
+      type = player.powerups.pop();
+    } else {
+      // No powerups – drop a random one
+      type = types[Math.floor(Math.random() * types.length)];
+    }
+
+    // Don't drop if the cell is already occupied by another powerup
+    const alreadyHere = this.powerups.find(p => p.x === player.x && p.y === player.y);
+    if (alreadyHere) return;
+
+    this.powerups.push({
+      id: `powerup-${this.tick}-drop`,
+      type,
+      x: player.x,
+      y: player.y,
+    });
+    console.log(`🎁 ${player.nickname} dropped [${type}] at (${player.x}, ${player.y})`);
+  }
+
+  /**
    * Check if player collected a powerup
    */
   checkPowerupCollection(player) {
@@ -363,6 +470,17 @@ export class GameRoom {
         case POWERUP_TYPES.SPEED:
           player.speed++;
           break;
+        case POWERUP_TYPES.ONE_UP:
+          player.lives++;
+          console.log(`❤️  ${player.nickname} got 1 Up! Lives: ${player.lives}`);
+          break;
+        case POWERUP_TYPES.BOMB_PASS: {
+          // Stack on top of any remaining duration
+          const remaining = Math.max(0, player.bombPassExpiry - Date.now());
+          player.bombPassExpiry = Date.now() + remaining + GAME_CONFIG.BOMB_PASS_DURATION;
+          console.log(`🛡️  ${player.nickname} got Bomb Pass! Active for ${Math.ceil((player.bombPassExpiry - Date.now()) / 1000)}s`);
+          break;
+        }
       }
 
       player.powerups.push(powerup.type);
@@ -391,10 +509,15 @@ export class GameRoom {
       this.tickInterval = null;
     }
 
-    // Reset game after 3 seconds
+    if (this.powerupSpawnInterval) {
+      clearInterval(this.powerupSpawnInterval);
+      this.powerupSpawnInterval = null;
+    }
+
+    // Reset game after the configured delay
     setTimeout(() => {
       this.resetGame();
-    }, 3000);
+    }, GAME_CONFIG.GAME_OVER_DELAY);
 
     return winner;
   }
@@ -410,7 +533,19 @@ export class GameRoom {
     this.explosions = [];
     this.powerups = [];
     this.tick = 0;
-    
+
+    console.log(`[resetGame] before clear: lobbyTimer=${!!this.lobbyTimer}, countdownTimer=${!!this.countdownTimer}, countdownValue=${this.countdownValue}`);
+    if (this.lobbyTimer) {
+      clearTimeout(this.lobbyTimer);
+      this.lobbyTimer = null;
+      this.lobbyStartTime = null;
+    }
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+    this.countdownValue = null;
+
     // Reset all players
     let playerIndex = 0;
     this.players.forEach(player => {
@@ -424,6 +559,8 @@ export class GameRoom {
       player.alive = true;
       player.powerups = [];
       player.index = playerIndex;
+      player.lastMoveTime = 0;
+      player.bombPassExpiry = 0;
       playerIndex++;
     });
 
@@ -452,15 +589,17 @@ export class GameRoom {
    * Get lobby info
    */
   getLobbyInfo() {
-    const now = Date.now();
     let timeRemaining = null;
-    
-    if (this.state === 'countdown' && this.countdownStartTime) {
-      timeRemaining = Math.max(0, GAME_CONFIG.COUNTDOWN_TIME - (now - this.countdownStartTime));
+
+    if (this.state === 'countdown') {
+      // Use the integer countdownValue driven by the same setInterval as startGame()
+      timeRemaining = this.countdownValue;
     } else if (this.lobbyTimer && this.lobbyStartTime) {
-      timeRemaining = Math.max(0, GAME_CONFIG.LOBBY_WAIT_TIME - (now - this.lobbyStartTime));
+      const now = Date.now();
+      const msLeft = Math.max(0, GAME_CONFIG.LOBBY_WAIT_TIME - (now - this.lobbyStartTime));
+      timeRemaining = msLeft > 0 ? Math.ceil(msLeft / 1000) : null;
     }
-    
+
     return {
       playerCount: this.players.size,
       players: Array.from(this.players.values()).map(p => ({
@@ -468,7 +607,7 @@ export class GameRoom {
         index: p.index,
       })),
       state: this.state,
-      timeRemaining: timeRemaining ? Math.ceil(timeRemaining / 1000) : null,
+      timeRemaining,
     };
   }
 
@@ -477,7 +616,8 @@ export class GameRoom {
    */
   destroy() {
     if (this.lobbyTimer) clearTimeout(this.lobbyTimer);
-    if (this.countdownTimer) clearTimeout(this.countdownTimer);
+    if (this.countdownTimer) clearInterval(this.countdownTimer);
     if (this.tickInterval) clearInterval(this.tickInterval);
+    if (this.powerupSpawnInterval) clearInterval(this.powerupSpawnInterval);
   }
 }

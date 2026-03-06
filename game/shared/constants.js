@@ -9,7 +9,13 @@ export const GAME_CONFIG = {
   COUNTDOWN_TIME: 10000, // 10 seconds
   PLAYER_LIVES: 3,
   BOMB_TIMER: 3000, // 3 seconds until explosion
-  EXPLOSION_DURATION: 1000, // 1 second (increased for visibility)
+  EXPLOSION_DURATION: 500, // 0.4 seconds
+  GAME_OVER_DELAY: 10000, // 10 seconds before auto-returning to lobby
+  MOVE_COOLDOWN_BASE: 220, // ms between moves at speed 1
+  MOVE_COOLDOWN_STEP: 55,  // ms reduction per extra speed level
+  MOVE_COOLDOWN_MIN: 55,   // minimum ms between moves (speed ~4)
+  POWERUP_SPAWN_INTERVAL: 30000, // ms between periodic random powerup spawns
+  BOMB_PASS_DURATION: 10000,     // ms that a single bomb-pass pickup lasts
 };
 
 // Grid cell types
@@ -33,6 +39,8 @@ export const POWERUP_TYPES = {
   BOMB: 'bomb',        // +1 bomb capacity
   FLAMES: 'flames',    // +1 explosion range
   SPEED: 'speed',      // +1 movement speed
+  ONE_UP: 'oneup',     // +1 life
+  BOMB_PASS: 'bombpass', // pass through bombs for BOMB_PASS_DURATION ms (stackable)
 };
 
 // Player starting positions (corners of 17x17 grid)

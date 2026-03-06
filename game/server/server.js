@@ -124,6 +124,16 @@ setInterval(() => {
 }, 1000 / 30);
 
 // Handle game state changes
+
+// Emit an immediate LOBBY_UPDATE the moment the countdown starts so clients
+// see the 10-second timer right away instead of waiting up to 1s for the
+// next setInterval tick.
+const originalStartCountdown = gameRoom.startCountdown.bind(gameRoom);
+gameRoom.startCountdown = function() {
+  originalStartCountdown();
+  io.to('main').emit(SOCKET_EVENTS.LOBBY_UPDATE, this.getLobbyInfo());
+};
+
 const originalStartGame = gameRoom.startGame.bind(gameRoom);
 gameRoom.startGame = function() {
   originalStartGame();

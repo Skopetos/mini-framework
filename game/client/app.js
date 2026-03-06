@@ -105,7 +105,7 @@ function App() {
     case 'game':
       return Game(state, socket);
     case 'gameOver':
-      return GameOver(state);
+      return GameOver(state, socket);
     default:
       return Lobby(state, socket);
   }

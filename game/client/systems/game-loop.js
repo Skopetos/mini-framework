@@ -370,6 +370,12 @@ export class GameLoop {
           case POWERUP_TYPES.SPEED:
             element.textContent = "⚡";
             break;
+          case POWERUP_TYPES.ONE_UP:
+            element.textContent = "❤️";
+            break;
+          case POWERUP_TYPES.BOMB_PASS:
+            element.textContent = "🌀";
+            break;
         }
       }
 

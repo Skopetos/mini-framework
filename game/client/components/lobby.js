@@ -53,6 +53,8 @@ export function Lobby(state, socket) {
   
   if (isCountdown && timeRemaining) {
     countdownMessage = `Game starting in ${timeRemaining} seconds...`;
+  } else if (isCountdown) {
+    countdownMessage = 'Game starting now...';
   } else if (playerCount >= 2 && timeRemaining) {
     countdownMessage = `Starting in ${timeRemaining} seconds (or when 4 players join)...`;
   } else if (playerCount >= 2) {
